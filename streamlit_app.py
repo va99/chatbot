@@ -1,14 +1,13 @@
-from collections import defaultdict
 from pathlib import Path
 import sqlite3
 import streamlit as st
-import altair as alt
 import pandas as pd
+import altair as alt
 
 # Set the title and favicon that appear in the Browser's tab bar.
 st.set_page_config(
     page_title="Referral Patient Tracker",
-    page_icon=":hospital:"  # This is an emoji shortcode. Could be a URL too.
+    page_icon=":hospital:",  # This is an emoji shortcode. Could be a URL too.
 )
 
 # -----------------------------------------------------------------------------
@@ -60,8 +59,28 @@ def load_data(conn):
     try:
         cursor.execute("SELECT * FROM referrals")
         data = cursor.fetchall()
-    except:
-        return None
+        if not data:
+            st.warning("No data found in the database.")
+            return pd.DataFrame(columns=[
+                "id",
+                "referral_id",
+                "patient_name",
+                "patient_age",
+                "patient_mobile",
+                "tpa_partner",
+                "mode_of_payment"
+            ])
+    except Exception as e:
+        st.error(f"Error loading data: {e}")
+        return pd.DataFrame(columns=[
+            "id",
+            "referral_id",
+            "patient_name",
+            "patient_age",
+            "patient_mobile",
+            "tpa_partner",
+            "mode_of_payment"
+        ])
 
     df = pd.DataFrame(
         data,
@@ -124,10 +143,9 @@ def update_data(conn, df, changes):
     conn.commit()
 
 # -----------------------------------------------------------------------------
-# Define TPA options (Mock Data from Doctor App)
-tpa_options = ["TPA1", "TPA2", "TPA3"]
-
 # Home screen content
+
+# Connect to database and create table if needed
 conn, db_was_just_created = connect_db()
 
 # Initialize data.
@@ -158,24 +176,23 @@ st.button(
 )
 
 # -----------------------------------------------------------------------------
-# Visualization: TPA Referrals Breakdown
+# Visualization: Best-Selling TPAs
 
-# Transforming the data for visualization
-tpa_breakdown = df.groupby(['mode_of_payment', 'tpa_partner']).size().reset_index(name='Count')
+# Best-selling TPA visualization
+tpa_data = df['tpa_partner'].value_counts().reset_index()
+tpa_data.columns = ['TPA Partner', 'Count']
 
-st.subheader("TPA Referrals Breakdown")
+st.subheader("Best-Selling TPAs")
 
 st.altair_chart(
-    alt.Chart(tpa_breakdown)
+    alt.Chart(tpa_data)
     .mark_bar()
     .encode(
         x=alt.X('Count', title='Number of Referrals'),
-        y=alt.Y('tpa_partner:N', title='TPA Partner'),
-        color='mode_of_payment:N',
-        column='mode_of_payment:N'
+        y=alt.Y('TPA Partner:N', title='TPA Partner')  # Fixed line
     )
     .properties(
-        title="Referrals by TPA Partner and Payment Mode"
+        title="Best-Selling TPAs"
     )
     .interactive()
     .configure_axis(
@@ -185,26 +202,26 @@ st.altair_chart(
 )
 
 # -----------------------------------------------------------------------------
-# Visualization: Hours Saved Comparison
+# Visualization: Hours Saved
 
-# Placeholder data for hours saved
+# Mock data for hours saved
 hours_saved_data = pd.DataFrame({
     'Process': ['Manual Form Filling', 'Automated System'],
-    'Hours': [20, 5]
+    'Hours Saved': [100, 20]  # Example values
 })
 
-st.subheader("Hours Saved Comparison")
+st.subheader("Hours Saved")
 
 st.altair_chart(
     alt.Chart(hours_saved_data)
     .mark_bar()
     .encode(
         x=alt.X('Process', title='Process'),
-        y=alt.Y('Hours', title='Hours'),
+        y=alt.Y('Hours Saved', title='Hours Saved'),
         color='Process'
     )
     .properties(
-        title="Comparison of Hours Saved"
+        title="Hours Saved Comparison"
     )
     .interactive()
     .configure_axis(

@@ -8,13 +8,14 @@ st.set_page_config(
     page_title="Referral Patient Tracker",
     page_icon=":hospital:",  # This is an emoji shortcode. Could be a URL too.
 )
+
 # Mock Data for Referrals
 data = [
-    {"id": 1, "referral_id": "R001", "patient_name": "John Doe", "patient_age": 45, "patient_mobile": "9876543210", "tpa_partner": "TPA1"},
-    {"id": 2, "referral_id": "R002", "patient_name": "Jane Smith", "patient_age": 34, "patient_mobile": "8765432109", "tpa_partner": "TPA2"},
-    {"id": 3, "referral_id": "R003", "patient_name": "Alice Brown", "patient_age": 29, "patient_mobile": "7654321098", "tpa_partner": "TPA3"},
-    {"id": 4, "referral_id": "R004", "patient_name": "Bob Johnson", "patient_age": 52, "patient_mobile": "6543210987", "tpa_partner": "TPA1"},
-    {"id": 5, "referral_id": "R005", "patient_name": "Carol White", "patient_age": 41, "patient_mobile": "5432109876", "tpa_partner": "TPA2"}
+    {"id": 1, "referral_id": "R001", "patient_name": "John Doe", "patient_age": 45, "patient_mobile": "9876543210", "tpa_partner": "TPA1", "city": "New York"},
+    {"id": 2, "referral_id": "R002", "patient_name": "Jane Smith", "patient_age": 34, "patient_mobile": "8765432109", "tpa_partner": "TPA2", "city": "Los Angeles"},
+    {"id": 3, "referral_id": "R003", "patient_name": "Alice Brown", "patient_age": 29, "patient_mobile": "7654321098", "tpa_partner": "TPA3", "city": "Chicago"},
+    {"id": 4, "referral_id": "R004", "patient_name": "Bob Johnson", "patient_age": 52, "patient_mobile": "6543210987", "tpa_partner": "TPA1", "city": "New York"},
+    {"id": 5, "referral_id": "R005", "patient_name": "Carol White", "patient_age": 41, "patient_mobile": "5432109876", "tpa_partner": "TPA2", "city": "Los Angeles"}
 ]
 
 # Convert mock data to DataFrame
@@ -109,25 +110,23 @@ st.altair_chart(
     use_container_width=True
 )
 
-# Visualization: Hours Saved
+# Visualization: Top Regions for You
 
-hours_saved_data = pd.DataFrame({
-    'Metric': ['Total Hours Saved'],
-    'Hours Saved': [total_hours_saved]
-})
+region_data = df['city'].value_counts().reset_index()
+region_data.columns = ['City', 'Number of Referrals']
 
-st.subheader("Hours Saved")
+st.subheader("Top Regions for You")
 
 st.altair_chart(
-    alt.Chart(hours_saved_data)
+    alt.Chart(region_data)
     .mark_bar()
     .encode(
-        x=alt.X('Metric', title='Metric'),
-        y=alt.Y('Hours Saved', title='Hours Saved'),
-        color='Metric'
+        x=alt.X('Number of Referrals', title='Number of Referrals'),
+        y=alt.Y('City:N', title='City'),
+        color='City'
     )
     .properties(
-        title="Hours Saved Compared to Manual Form Filling"
+        title="Top Regions for You"
     )
     .interactive()
     .configure_axis(

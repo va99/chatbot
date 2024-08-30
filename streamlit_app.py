@@ -9,17 +9,56 @@ st.set_page_config(
     page_icon=":hospital:",  # This is an emoji shortcode. Could be a URL too.
 )
 
-# Mock Data for Referrals in India
-data = [
-    {"id": 1, "referral_id": "R001", "patient_name": "Amit Sharma", "patient_age": 45, "patient_mobile": "9876543210", "mode_of_payment": "TPA", "tpa_partner": "TPA1", "city": "Mumbai"},
-    {"id": 2, "referral_id": "R002", "patient_name": "Anita Singh", "patient_age": 34, "patient_mobile": "8765432109", "mode_of_payment": "Cash", "tpa_partner": None, "city": "Delhi"},
-    {"id": 3, "referral_id": "R003", "patient_name": "Raj Patel", "patient_age": 29, "patient_mobile": "7654321098", "mode_of_payment": "TPA", "tpa_partner": "TPA3", "city": "Bengaluru"},
-    {"id": 4, "referral_id": "R004", "patient_name": "Sita Gupta", "patient_age": 52, "patient_mobile": "6543210987", "mode_of_payment": "TPA", "tpa_partner": "TPA1", "city": "Mumbai"},
-    {"id": 5, "referral_id": "R005", "patient_name": "Ravi Kumar", "patient_age": 41, "patient_mobile": "5432109876", "mode_of_payment": "Cash", "tpa_partner": None, "city": "Delhi"}
-]
+# TPA mock data
+tpa_data = {
+    "01": "Medi Assist",
+    "02": "Paramount Health Services",
+    "03": "FHPL (Family Health Plan Limited)",
+    "04": "Health India TPA",
+    "05": "Star Health",
+    "06": "Apollo Munich",
+    "07": "ICICI Lombard",
+    "08": "UnitedHealthcare",
+    "09": "Religare Health Insurance",
+    "10": "HDFC ERGO",
+    "11": "Max Bupa Health Insurance",
+    "12": "SBI Health Insurance",
+    "13": "New India Assurance",
+    "14": "Oriental Insurance",
+    "15": "National Insurance",
+    "16": "United India Insurance",
+    "17": "IFFCO Tokio",
+    "18": "Cholamandalam MS General Insurance",
+    "19": "Bajaj Allianz",
+    "20": "Reliance General Insurance"
+}
+
+# Generate mock data for 67 referrals
+np.random.seed(0)  # For reproducibility
+cities = ["Mumbai", "Delhi", "Bengaluru", "Chennai", "Hyderabad"]
+modes_of_payment = ["TPA", "Cash"]
+tpas = list(tpa_data.keys())
+
+data = []
+for i in range(67):
+    mode = np.random.choice(modes_of_payment)
+    tpa_partner = np.random.choice(tpas) if mode == "TPA" else None
+    data.append({
+        "id": i + 1,
+        "referral_id": f"R{str(i + 1).zfill(3)}",
+        "patient_name": f"Patient {i + 1}",
+        "patient_age": np.random.randint(20, 80),
+        "patient_mobile": f"9{np.random.randint(100000000, 999999999)}",
+        "mode_of_payment": mode,
+        "tpa_partner": tpa_partner,
+        "city": np.random.choice(cities)
+    })
 
 # Convert mock data to DataFrame
 df = pd.DataFrame(data)
+
+# Map TPA codes to TPA names
+df['tpa_partner_name'] = df['tpa_partner'].map(tpa_data).fillna('N/A')
 
 # Calculate total patients and revenue
 total_patients = len(df)
@@ -27,7 +66,6 @@ revenue_per_patient = 1299  # USD
 total_revenue = total_patients * revenue_per_patient
 
 # Generate random times saved data
-np.random.seed(0)  # For reproducibility
 df['time_saved_minutes'] = np.random.randint(5, 15, size=len(df))  # Random minutes saved between 5 and 15
 
 # Calculate total hours saved
@@ -90,7 +128,7 @@ st.altair_chart(
 
 # Extract only TPA entries for this visualization
 tpa_df = df[df['mode_of_payment'] == 'TPA']
-tpa_data = tpa_df['tpa_partner'].value_counts().reset_index()
+tpa_data = tpa_df['tpa_partner_name'].value_counts().reset_index()
 tpa_data.columns = ['TPA Partner', 'Count']
 
 st.subheader("Best-Selling TPAs")

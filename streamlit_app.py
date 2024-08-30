@@ -63,7 +63,8 @@ df['tpa_partner_name'] = df['tpa_partner'].map(tpa_data).fillna('N/A')
 # Calculate total patients and revenue
 total_patients = len(df)
 revenue_per_patient = 1299  # USD
-total_revenue = total_patients * revenue_per_patient
+total_revenue_usd = total_patients * revenue_per_patient
+total_revenue_inr = total_revenue_usd * 82.3  # Convert USD to INR (1 USD ≈ 82.3 INR)
 
 # Calculate count of Cash and TPA patients
 cash_patients = df[df['mode_of_payment'] == 'Cash'].shape[0]
@@ -100,7 +101,7 @@ with col1:
     st.metric(label="Total Patients", value=total_patients)
 
 with col2:
-    st.metric(label="Revenue", value=f"₹{total_revenue * 82.3:,.2f}")  # Converting USD to INR (1 USD = 82.3 INR approximately)
+    st.metric(label="Revenue (INR)", value=f"₹{total_revenue_inr:,.2f}")
 
 with col3:
     st.metric(label="Cash Patients", value=cash_patients)

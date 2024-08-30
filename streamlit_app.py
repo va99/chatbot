@@ -4,11 +4,6 @@ import sqlite3
 import streamlit as st
 import altair as alt
 import pandas as pd
-import openai
-import os  # Add this line
-
-# Set the OpenAI API key from an environment variable
-openai.api_key = os.getenv('OPENAI_API_KEY')
 
 # Set the title and favicon that appear in the Browser's tab bar.
 st.set_page_config(
@@ -39,7 +34,8 @@ def initialize_data(conn):
             patient_name TEXT,
             patient_age INTEGER,
             patient_mobile TEXT,
-            tpa_partner TEXT
+            tpa_partner TEXT,
+            mode_of_payment TEXT
         )
         """
     )
@@ -47,13 +43,13 @@ def initialize_data(conn):
     cursor.execute(
         """
         INSERT INTO referrals
-            (referral_id, patient_name, patient_age, patient_mobile, tpa_partner)
+            (referral_id, patient_name, patient_age, patient_mobile, tpa_partner, mode_of_payment)
         VALUES
-            ('R001', 'John Doe', 45, '9876543210', 'TPA1'),
-            ('R002', 'Jane Smith', 34, '8765432109', 'TPA2'),
-            ('R003', 'Alice Brown', 29, '7654321098', 'TPA3'),
-            ('R004', 'Bob Johnson', 52, '6543210987', 'TPA1'),
-            ('R005', 'Carol White', 41, '5432109876', 'TPA2')
+            ('R001', 'John Doe', 45, '9876543210', 'TPA1', 'TPA'),
+            ('R002', 'Jane Smith', 34, '8765432109', 'TPA2', 'Cash'),
+            ('R003', 'Alice Brown', 29, '7654321098', 'TPA3', 'TPA'),
+            ('R004', 'Bob Johnson', 52, '6543210987', 'TPA1', 'Cash'),
+            ('R005', 'Carol White', 41, '5432109876', 'TPA2', 'TPA')
         """
     )
     conn.commit()
@@ -76,6 +72,7 @@ def load_data(conn):
             "patient_age",
             "patient_mobile",
             "tpa_partner",
+            "mode_of_payment"
         ],
     )
     return df
@@ -100,7 +97,8 @@ def update_data(conn, df, changes):
                 patient_name = :patient_name,
                 patient_age = :patient_age,
                 patient_mobile = :patient_mobile,
-                tpa_partner = :tpa_partner
+                tpa_partner = :tpa_partner,
+                mode_of_payment = :mode_of_payment
             WHERE id = :id
             """,
             rows,
@@ -110,9 +108,9 @@ def update_data(conn, df, changes):
         cursor.executemany(
             """
             INSERT INTO referrals
-                (id, referral_id, patient_name, patient_age, patient_mobile, tpa_partner)
+                (id, referral_id, patient_name, patient_age, patient_mobile, tpa_partner, mode_of_payment)
             VALUES
-                (:id, :referral_id, :patient_name, :patient_age, :patient_mobile, :tpa_partner)
+                (:id, :referral_id, :patient_name, :patient_age, :patient_mobile, :tpa_partner, :mode_of_payment)
             """,
             (defaultdict(lambda: None, row) for row in changes["added_rows"]),
         )
@@ -125,84 +123,11 @@ def update_data(conn, df, changes):
 
     conn.commit()
 
-def add_hospital_to_db(conn, name, description, city, state, total_beds, tpas):
-    """Adds new hospital details to the database."""
-    cursor = conn.cursor()
-    cursor.execute(
-        """
-        CREATE TABLE IF NOT EXISTS hospitals (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            hospital_name TEXT,
-            description TEXT,
-            city TEXT,
-            state TEXT,
-            total_beds INTEGER,
-            empanelled_tpas TEXT
-        )
-        """
-    )
-    cursor.execute(
-        """
-        INSERT INTO hospitals (hospital_name, description, city, state, total_beds, empanelled_tpas)
-        VALUES (?, ?, ?, ?, ?, ?)
-        """,
-        (name, description, city, state, total_beds, ", ".join(tpas))
-    )
-    conn.commit()
-
-def query_llm(prompt):
-    """Query the LLM with a given prompt."""
-    response = openai.Completion.create(
-        engine="text-davinci-003",
-        prompt=prompt,
-        max_tokens=150
-    )
-    return response.choices[0].text.strip()
-
 # -----------------------------------------------------------------------------
 # Define TPA options (Mock Data from Doctor App)
 tpa_options = ["TPA1", "TPA2", "TPA3"]
 
-# Form for adding hospital information
-if 'form_submitted' not in st.session_state:
-    st.session_state['form_submitted'] = False
-
-if not st.session_state['form_submitted']:
-    st.sidebar.header("Add New Hospital Information")
-
-    with st.sidebar.form(key='hospital_form'):
-        st.header("Hospital Information Form")
-        hospital_name = st.text_input("Hospital Name")
-        description = st.text_area("A brief description", max_chars=300)
-        city = st.text_input("City")
-        state = st.text_input("State")
-        total_beds = st.number_input("Total Bed Units", min_value=1)
-        
-        # Multi-selection list for Empanelled TPA
-        empanelled_tpas = st.multiselect("Empanelled TPA", options=tpa_options)
-        
-        submit_button = st.form_submit_button(label='Submit')
-        
-        if submit_button:
-            try:
-                add_hospital_to_db(conn, hospital_name, description, city, state, total_beds, empanelled_tpas)
-                st.session_state['form_submitted'] = True
-                st.experimental_rerun()  # Refresh the app to show the new screen
-            except Exception as e:
-                st.error(f"Error occurred while submitting the form: {e}")
-
-else:
-    # Display a message on the new screen
-    st.title(f"HELLO {hospital_name}")
-    st.write("Thank you for submitting your details. The hospital has been added.")
-    st.write("You can now navigate to the referral tracking screen from the sidebar.")
-
-# -----------------------------------------------------------------------------
-# Home screen content if form has been submitted
-if st.session_state['form_submitted']:
-    st.title(f"HELLO {hospital_name}")
-
-# Connect to database and create table if needed
+# Home screen content
 conn, db_was_just_created = connect_db()
 
 # Initialize data.
@@ -277,10 +202,39 @@ st.altair_chart(
     .mark_bar()
     .encode(
         x=alt.X('Count', title='Number of Referrals'),
-        y=alt.Y('TPA Partner:N', title='TPA Partner')  # Fixed line
+        y=alt.Y('TPA Partner:N', title='TPA Partner')
     )
     .properties(
         title="Best-Selling TPAs"
+    )
+    .interactive()
+    .configure_axis(
+        labelAngle=0
+    ),
+    use_container_width=True
+)
+
+# -----------------------------------------------------------------------------
+# Visualization: Hours Saved Comparison
+
+# Placeholder data for hours saved
+hours_saved_data = pd.DataFrame({
+    'Process': ['Manual Form Filling', 'Automated System'],
+    'Hours': [20, 5]
+})
+
+st.subheader("Hours Saved Comparison")
+
+st.altair_chart(
+    alt.Chart(hours_saved_data)
+    .mark_bar()
+    .encode(
+        x=alt.X('Process', title='Process'),
+        y=alt.Y('Hours', title='Hours Saved'),
+        color='Process'
+    )
+    .properties(
+        title="Comparison of Hours Saved"
     )
     .interactive()
     .configure_axis(

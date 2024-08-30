@@ -35,7 +35,8 @@ total_patients = len(df)
 total_revenue_inr = total_patients * 1299 * 82.3
 cash_patients = df['mode_of_payment'].value_counts().get('Cash', 0)
 tpa_patients = df['mode_of_payment'].value_counts().get('TPA', 0)
-total_hours_saved = df['time_saved_minutes'].sum() / 60
+total_minutes_saved = df['time_saved_minutes'].sum() if 'time_saved_minutes' in df.columns else 0
+total_hours_saved = total_minutes_saved / 60
 
 # Display metrics
 col1, col2, col3, col4 = st.columns(4)
@@ -45,25 +46,35 @@ with col3: st.metric("Cash Patients", cash_patients)
 with col4: st.metric("TPA Patients", tpa_patients)
 
 # Visualizations
-visualizations = {
-    "Bed Occupancy": {
-        'Unit': ['ICU', 'General Ward', 'Emergency', 'Maternity', 'Pediatrics'],
-        'Occupied': [10, 30, 5, 8, 15],
-        'Total': [15, 50, 10, 12, 20]
-    },
-    "Best-Selling TPAs": df[df['mode_of_payment'] == 'TPA']['tpa_partner_name'].value_counts().reset_index(),
-    "Top Regions": df['city'].value_counts().reset_index()
-}
-
-for title, data in visualizations.items():
-    st.subheader(title)
-    chart_data = pd.DataFrame(data)
-    chart = alt.Chart(chart_data).mark_bar().encode(
-        x=alt.X('Count' if 'Count' in chart_data.columns else 'Available', title='Count'),
-        y=alt.Y('index', title='Category'),
-        color='index' if 'index' in chart_data.columns else None
-    ).properties(title=title).interactive()
+def plot_chart(data, x_col, y_col, color_col=None):
+    chart = alt.Chart(data).mark_bar().encode(
+        x=alt.X(x_col, title='Count'),
+        y=alt.Y(y_col, title='Category'),
+        color=color_col
+    ).properties(title=y_col).interactive()
     st.altair_chart(chart, use_container_width=True)
+
+# Bed Occupancy
+bed_occupancy_data = pd.DataFrame({
+    'Unit': ['ICU', 'General Ward', 'Emergency', 'Maternity', 'Pediatrics'],
+    'Occupied': [10, 30, 5, 8, 15],
+    'Total': [15, 50, 10, 12, 20]
+})
+bed_occupancy_data['Available'] = bed_occupancy_data['Total'] - bed_occupancy_data['Occupied']
+st.subheader("Bed Occupancy")
+plot_chart(bed_occupancy_data, 'Available', 'Unit', 'Unit')
+
+# Best-Selling TPAs
+tpa_df = df[df['mode_of_payment'] == 'TPA']['tpa_partner_name'].value_counts().reset_index()
+tpa_df.columns = ['TPA Partner', 'Count']
+st.subheader("Best-Selling TPAs")
+plot_chart(tpa_df, 'Count', 'TPA Partner')
+
+# Top Regions
+region_data = df['city'].value_counts().reset_index()
+region_data.columns = ['City', 'Number of Referrals']
+st.subheader("Top Regions for You")
+plot_chart(region_data, 'Number of Referrals', 'City', 'City')
 
 # Pre-auth form
 st.title("Pre-Authorization Manager")

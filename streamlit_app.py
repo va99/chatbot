@@ -66,14 +66,16 @@ revenue_per_patient = 1299  # USD
 total_revenue_usd = total_patients * revenue_per_patient
 total_revenue_inr = total_revenue_usd * 82.3  # Convert USD to INR (1 USD ≈ 82.3 INR)
 
-# Display metrics at the top
-st.markdown(
-    f"""
-    ### **Total Patients: {total_patients}**
-    **Revenue (INR): ₹{total_revenue_inr:,.2f}**
-    """,
-    unsafe_allow_html=True
-)
+# Calculate count of Cash and TPA patients
+cash_patients = df[df['mode_of_payment'] == 'Cash'].shape[0]
+tpa_patients = df[df['mode_of_payment'] == 'TPA'].shape[0]
+
+# Generate random times saved data
+df['time_saved_minutes'] = np.random.randint(5, 15, size=len(df))  # Random minutes saved between 5 and 15
+
+# Calculate total hours saved
+total_minutes_saved = df['time_saved_minutes'].sum()
+total_hours_saved = total_minutes_saved / 60
 
 # Display data with editable table
 edited_df = st.data_editor(
@@ -92,7 +94,32 @@ st.button(
     # Normally would update data in the database, but now it's just for the UI.
 )
 
+# Create a layout with columns for metrics
+col1, col2 = st.columns(2)
+
+with col1:
+    st.metric(label="Total Patients", value=total_patients)
+
+with col2:
+    st.metric(label="Revenue (INR)", value=f"₹{total_revenue_inr:,.2f}")
+
+# Pre-Auth Manager Section
+st.subheader("Pre-Authorization Manager")
+
+# Mock data for pre-authorization requests
+pre_auth_data = {
+    "Request ID": [f"PA{str(i+1).zfill(3)}" for i in range(10)],
+    "Patient Name": [f"Patient {i+1}" for i in range(10)],
+    "Treatment": np.random.choice(["Surgery", "Consultation", "Medication"], size=10),
+    "Status": np.random.choice(["Pending", "Approved", "Rejected"], size=10),
+    "Submission Date": pd.date_range(start="2024-08-01", periods=10, freq='D')
+}
+pre_auth_df = pd.DataFrame(pre_auth_data)
+
+st.dataframe(pre_auth_df)
+
 # Visualization: Bed Occupancy
+st.subheader("Bed Occupancy")
 
 # Placeholder data for bed occupancy in India
 bed_occupancy_data = pd.DataFrame({
@@ -102,8 +129,6 @@ bed_occupancy_data = pd.DataFrame({
 })
 
 bed_occupancy_data['Available'] = bed_occupancy_data['Total'] - bed_occupancy_data['Occupied']
-
-st.subheader("Bed Occupancy")
 
 st.altair_chart(
     alt.Chart(bed_occupancy_data)
@@ -124,13 +149,12 @@ st.altair_chart(
 )
 
 # Visualization: Best-Selling TPAs
+st.subheader("Best-Selling TPAs")
 
 # Extract only TPA entries for this visualization
 tpa_df = df[df['mode_of_payment'] == 'TPA']
 tpa_data = tpa_df['tpa_partner_name'].value_counts().reset_index()
 tpa_data.columns = ['TPA Partner', 'Count']
-
-st.subheader("Best-Selling TPAs")
 
 st.altair_chart(
     alt.Chart(tpa_data)
@@ -150,11 +174,10 @@ st.altair_chart(
 )
 
 # Visualization: Top Regions for You
+st.subheader("Top Regions for You")
 
 region_data = df['city'].value_counts().reset_index()
 region_data.columns = ['City', 'Number of Referrals']
-
-st.subheader("Top Regions for You")
 
 st.altair_chart(
     alt.Chart(region_data)

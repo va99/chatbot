@@ -2,6 +2,8 @@ import streamlit as st
 import altair as alt
 import pandas as pd
 import numpy as np
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.preprocessing import LabelEncoder
 
 # Set the title and favicon that appear in the Browser's tab bar.
 st.set_page_config(
@@ -106,17 +108,30 @@ with col2:
 # Pre-Auth Manager Section
 st.subheader("Pre-Authorization Manager")
 
-# Mock data for pre-authorization requests
-pre_auth_data = {
-    "Request ID": [f"PA{str(i+1).zfill(3)}" for i in range(10)],
-    "Patient Name": [f"Patient {i+1}" for i in range(10)],
-    "Treatment": np.random.choice(["Surgery", "Consultation", "Medication"], size=10),
-    "Status": np.random.choice(["Pending", "Approved", "Rejected"], size=10),
-    "Submission Date": pd.date_range(start="2024-08-01", periods=10, freq='D')
-}
-pre_auth_df = pd.DataFrame(pre_auth_data)
-
-st.dataframe(pre_auth_df)
+# Create a form for entering patient details
+with st.form(key='pre_auth_form'):
+    patient_name = st.text_input("Patient Name")
+    patient_age = st.number_input("Patient Age", min_value=0, max_value=120)
+    treatment = st.selectbox("Treatment", ["Surgery", "Consultation", "Medication"])
+    submission_date = st.date_input("Submission Date")
+    
+    # Simulated ML model for prediction (e.g., predicting the status of the pre-auth request)
+    if st.form_submit_button("Predict and Submit"):
+        # Simulate ML prediction
+        st.write(f"Patient Name: {patient_name}")
+        st.write(f"Patient Age: {patient_age}")
+        st.write(f"Treatment: {treatment}")
+        st.write(f"Submission Date: {submission_date}")
+        
+        # Simulated machine learning prediction (e.g., treatment classification)
+        # Here, we just use random selection for simulation
+        statuses = ["Pending", "Approved", "Rejected"]
+        status = np.random.choice(statuses)
+        
+        st.write(f"Predicted Status: {status}")
+        
+        # In a real application, here you would process the submission
+        st.success("Pre-authorization request has been submitted!")
 
 # Visualization: Bed Occupancy
 st.subheader("Bed Occupancy")

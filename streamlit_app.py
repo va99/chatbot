@@ -20,6 +20,17 @@ data = [
 # Convert mock data to DataFrame
 df = pd.DataFrame(data)
 
+# Calculate hours saved
+minutes_saved_per_patient = 8
+total_referrals = len(df)
+total_minutes_saved = total_referrals * minutes_saved_per_patient
+total_hours_saved = total_minutes_saved / 60
+
+# Calculate total patients and revenue
+total_patients = len(df)
+revenue_per_patient = 1299
+total_revenue = total_patients * revenue_per_patient
+
 # Display data with editable table
 edited_df = st.data_editor(
     df,
@@ -36,6 +47,10 @@ st.button(
     disabled=not has_uncommitted_changes,
     # Normally would update data in the database, but now it's just for the UI.
 )
+
+# Display Total Patients and Revenue
+st.write(f"**Total Patients**: {total_patients}")
+st.write(f"**Revenue**: ${total_revenue:,.2f}")
 
 # Visualization: Bed Occupancy
 
@@ -80,10 +95,37 @@ st.altair_chart(
     .mark_bar()
     .encode(
         x=alt.X('Count', title='Number of Referrals'),
-        y=alt.Y('TPA Partner:N', title='TPA Partner')  # Fixed line
+        y=alt.Y('TPA Partner:N', title='TPA Partner')
     )
     .properties(
         title="Best-Selling TPAs"
+    )
+    .interactive()
+    .configure_axis(
+        labelAngle=0
+    ),
+    use_container_width=True
+)
+
+# Visualization: Hours Saved
+
+hours_saved_data = pd.DataFrame({
+    'Metric': ['Total Hours Saved'],
+    'Hours Saved': [total_hours_saved]
+})
+
+st.subheader("Hours Saved")
+
+st.altair_chart(
+    alt.Chart(hours_saved_data)
+    .mark_bar()
+    .encode(
+        x=alt.X('Metric', title='Metric'),
+        y=alt.Y('Hours Saved', title='Hours Saved'),
+        color='Metric'
+    )
+    .properties(
+        title="Hours Saved Compared to Manual Form Filling"
     )
     .interactive()
     .configure_axis(

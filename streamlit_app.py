@@ -65,6 +65,10 @@ total_patients = len(df)
 revenue_per_patient = 1299  # USD
 total_revenue = total_patients * revenue_per_patient
 
+# Calculate count of Cash and TPA patients
+cash_patients = df[df['mode_of_payment'] == 'Cash'].shape[0]
+tpa_patients = df[df['mode_of_payment'] == 'TPA'].shape[0]
+
 # Generate random times saved data
 df['time_saved_minutes'] = np.random.randint(5, 15, size=len(df))  # Random minutes saved between 5 and 15
 
@@ -89,9 +93,11 @@ st.button(
     # Normally would update data in the database, but now it's just for the UI.
 )
 
-# Display Total Patients and Revenue
+# Display Total Patients, Revenue, Cash Patients, and TPA Patients
 st.write(f"**Total Patients**: {total_patients}")
 st.write(f"**Revenue**: ₹{total_revenue * 82.3:,.2f}")  # Converting USD to INR (1 USD = 82.3 INR approximately)
+st.write(f"**Cash Patients**: {cash_patients}")
+st.write(f"**TPA Patients**: {tpa_patients}")
 
 # Visualization: Bed Occupancy
 

@@ -66,24 +66,11 @@ revenue_per_patient = 1299  # USD
 total_revenue_usd = total_patients * revenue_per_patient
 total_revenue_inr = total_revenue_usd * 82.3  # Convert USD to INR (1 USD ≈ 82.3 INR)
 
-# Calculate count of Cash and TPA patients
-cash_patients = df[df['mode_of_payment'] == 'Cash'].shape[0]
-tpa_patients = df[df['mode_of_payment'] == 'TPA'].shape[0]
-
-# Generate random times saved data
-df['time_saved_minutes'] = np.random.randint(5, 15, size=len(df))  # Random minutes saved between 5 and 15
-
-# Calculate total hours saved
-total_minutes_saved = df['time_saved_minutes'].sum()
-total_hours_saved = total_minutes_saved / 60
-
 # Display metrics at the top
 st.markdown(
     f"""
     ### **Total Patients: {total_patients}**
     **Revenue (INR): ₹{total_revenue_inr:,.2f}**
-    **Cash Patients: {cash_patients}**
-    **TPA Patients: {tpa_patients}**
     """,
     unsafe_allow_html=True
 )
@@ -104,24 +91,6 @@ st.button(
     disabled=not has_uncommitted_changes,
     # Normally would update data in the database, but now it's just for the UI.
 )
-
-# Create a layout with columns for metrics
-col1, col2, col3, col4 = st.columns(4)
-
-with col1:
-    st.metric(label="Total Patients", value=total_patients)
-
-with col2:
-    st.markdown(
-        f"<h3 style='text-align: center;'>Revenue (INR)</h3><h2 style='text-align: center;'>₹{total_revenue_inr:,.2f}</h2>",
-        unsafe_allow_html=True
-    )
-
-with col3:
-    st.metric(label="Cash Patients", value=cash_patients)
-
-with col4:
-    st.metric(label="TPA Patients", value=tpa_patients)
 
 # Visualization: Bed Occupancy
 

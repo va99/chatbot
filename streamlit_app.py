@@ -1,13 +1,13 @@
 from pathlib import Path
 import sqlite3
 import streamlit as st
-import pandas as pd
 import altair as alt
+import pandas as pd
 
 # Set the title and favicon that appear in the Browser's tab bar.
 st.set_page_config(
     page_title="Referral Patient Tracker",
-    page_icon=":hospital:",  # This is an emoji shortcode. Could be a URL too.
+    page_icon=":hospital:"  # This is an emoji shortcode. Could be a URL too.
 )
 
 # -----------------------------------------------------------------------------
@@ -59,40 +59,17 @@ def load_data(conn):
     try:
         cursor.execute("SELECT * FROM referrals")
         data = cursor.fetchall()
-        if not data:
-            st.warning("No data found in the database.")
-            return pd.DataFrame(columns=[
-                "id",
-                "referral_id",
-                "patient_name",
-                "patient_age",
-                "patient_mobile",
-                "tpa_partner",
-                "mode_of_payment"
-            ])
     except Exception as e:
         st.error(f"Error loading data: {e}")
         return pd.DataFrame(columns=[
-            "id",
-            "referral_id",
-            "patient_name",
-            "patient_age",
-            "patient_mobile",
-            "tpa_partner",
-            "mode_of_payment"
+            "id", "referral_id", "patient_name", "patient_age", "patient_mobile", "tpa_partner", "mode_of_payment"
         ])
 
     df = pd.DataFrame(
         data,
         columns=[
-            "id",
-            "referral_id",
-            "patient_name",
-            "patient_age",
-            "patient_mobile",
-            "tpa_partner",
-            "mode_of_payment"
-        ],
+            "id", "referral_id", "patient_name", "patient_age", "patient_mobile", "tpa_partner", "mode_of_payment"
+        ]
     )
     return df
 
@@ -148,7 +125,7 @@ def update_data(conn, df, changes):
 # Connect to database and create table if needed
 conn, db_was_just_created = connect_db()
 
-# Initialize data.
+# Initialize data
 if db_was_just_created:
     initialize_data(conn)
     st.toast("Database initialized with some sample data.")
@@ -176,9 +153,40 @@ st.button(
 )
 
 # -----------------------------------------------------------------------------
+# Visualization: Bed Occupancy
+
+# Placeholder data for bed occupancy
+bed_occupancy_data = pd.DataFrame({
+    'Unit': ['ICU', 'General Ward', 'Emergency', 'Maternity', 'Pediatrics'],
+    'Occupied': [10, 30, 5, 8, 15],
+    'Total': [15, 50, 10, 12, 20]
+})
+
+bed_occupancy_data['Available'] = bed_occupancy_data['Total'] - bed_occupancy_data['Occupied']
+
+st.subheader("Bed Occupancy")
+
+st.altair_chart(
+    alt.Chart(bed_occupancy_data)
+    .mark_bar()
+    .encode(
+        x=alt.X('Unit', title='Unit'),
+        y=alt.Y('Available', title='Available Beds'),
+        color='Unit'
+    )
+    .properties(
+        title="Bed Occupancy"
+    )
+    .interactive()
+    .configure_axis(
+        labelAngle=0
+    ),
+    use_container_width=True
+)
+
+# -----------------------------------------------------------------------------
 # Visualization: Best-Selling TPAs
 
-# Best-selling TPA visualization
 tpa_data = df['tpa_partner'].value_counts().reset_index()
 tpa_data.columns = ['TPA Partner', 'Count']
 
@@ -189,7 +197,7 @@ st.altair_chart(
     .mark_bar()
     .encode(
         x=alt.X('Count', title='Number of Referrals'),
-        y=alt.Y('TPA Partner:N', title='TPA Partner')  # Fixed line
+        y=alt.Y('TPA Partner:N', title='TPA Partner')
     )
     .properties(
         title="Best-Selling TPAs"

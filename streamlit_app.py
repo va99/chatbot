@@ -1,6 +1,7 @@
 import streamlit as st
 import altair as alt
 import pandas as pd
+import numpy as np
 
 # Set the title and favicon that appear in the Browser's tab bar.
 st.set_page_config(
@@ -20,16 +21,18 @@ data = [
 # Convert mock data to DataFrame
 df = pd.DataFrame(data)
 
-# Calculate hours saved
-minutes_saved_per_patient = 8
-total_referrals = len(df)
-total_minutes_saved = total_referrals * minutes_saved_per_patient
-total_hours_saved = total_minutes_saved / 60
-
 # Calculate total patients and revenue
 total_patients = len(df)
 revenue_per_patient = 1299
 total_revenue = total_patients * revenue_per_patient
+
+# Generate random times saved data
+np.random.seed(0)  # For reproducibility
+df['time_saved_minutes'] = np.random.randint(5, 15, size=len(df))  # Random minutes saved between 5 and 15
+
+# Calculate total hours saved
+total_minutes_saved = df['time_saved_minutes'].sum()
+total_hours_saved = total_minutes_saved / 60
 
 # Display data with editable table
 edited_df = st.data_editor(

@@ -3,10 +3,10 @@ import altair as alt
 import pandas as pd
 import numpy as np
 
-# Set the title and favicon that appear in the Browser's tab bar.
+# Set up the page title and icon
 st.set_page_config(
     page_title="Referral Patient Tracker",
-    page_icon=":hospital:",  # This is an emoji shortcode. Could be a URL too.
+    page_icon=":hospital:"
 )
 
 # TPA mock data
@@ -77,25 +77,8 @@ df['time_saved_minutes'] = np.random.randint(5, 15, size=len(df))  # Random minu
 total_minutes_saved = df['time_saved_minutes'].sum()
 total_hours_saved = total_minutes_saved / 60
 
-# Display data with editable table
-edited_df = st.data_editor(
-    df,
-    disabled=["id"],  # Don't allow editing the 'id' column.
-    num_rows="dynamic",  # Allow appending/deleting rows.
-    key="referrals_table",
-)
-
-has_uncommitted_changes = any(len(v) for v in st.session_state.referrals_table.values())
-
-st.button(
-    "Commit changes",
-    type="primary",
-    disabled=not has_uncommitted_changes,
-    # Normally would update data in the database, but now it's just for the UI.
-)
-
-# Create a layout with columns for metrics
-col1, col2 = st.columns(2)
+# Display metrics
+col1, col2, col3, col4 = st.columns(4)
 
 with col1:
     st.metric(label="Total Patients", value=total_patients)
@@ -103,34 +86,13 @@ with col1:
 with col2:
     st.metric(label="Revenue (INR)", value=f"₹{total_revenue_inr:,.2f}")
 
-# Pre-Auth Manager Section
-st.subheader("Pre-Authorization Manager")
+with col3:
+    st.metric(label="Cash Patients", value=cash_patients)
 
-# Create a form for entering patient details
-with st.form(key='pre_auth_form'):
-    patient_name = st.text_input("Patient Name")
-    patient_age = st.number_input("Patient Age", min_value=0, max_value=120)
-    treatment = st.selectbox("Treatment", ["Surgery", "Consultation", "Medication"])
-    submission_date = st.date_input("Submission Date")
-    
-    # Simulated prediction
-    if st.form_submit_button("Submit"):
-        # Simulate some prediction logic
-        status = np.random.choice(["Pending", "Approved", "Rejected"])
-        
-        st.write(f"Patient Name: {patient_name}")
-        st.write(f"Patient Age: {patient_age}")
-        st.write(f"Treatment: {treatment}")
-        st.write(f"Submission Date: {submission_date}")
-        st.write(f"Predicted Status: {status}")
-        
-        # In a real application, here you would process the submission
-        st.success("Pre-authorization request has been submitted!")
+with col4:
+    st.metric(label="TPA Patients", value=tpa_patients)
 
 # Visualization: Bed Occupancy
-st.subheader("Bed Occupancy")
-
-# Placeholder data for bed occupancy in India
 bed_occupancy_data = pd.DataFrame({
     'Unit': ['ICU', 'General Ward', 'Emergency', 'Maternity', 'Pediatrics'],
     'Occupied': [10, 30, 5, 8, 15],
@@ -138,6 +100,8 @@ bed_occupancy_data = pd.DataFrame({
 })
 
 bed_occupancy_data['Available'] = bed_occupancy_data['Total'] - bed_occupancy_data['Occupied']
+
+st.subheader("Bed Occupancy")
 
 st.altair_chart(
     alt.Chart(bed_occupancy_data)
@@ -158,12 +122,11 @@ st.altair_chart(
 )
 
 # Visualization: Best-Selling TPAs
-st.subheader("Best-Selling TPAs")
-
-# Extract only TPA entries for this visualization
 tpa_df = df[df['mode_of_payment'] == 'TPA']
 tpa_data = tpa_df['tpa_partner_name'].value_counts().reset_index()
 tpa_data.columns = ['TPA Partner', 'Count']
+
+st.subheader("Best-Selling TPAs")
 
 st.altair_chart(
     alt.Chart(tpa_data)
@@ -183,10 +146,10 @@ st.altair_chart(
 )
 
 # Visualization: Top Regions for You
-st.subheader("Top Regions for You")
-
 region_data = df['city'].value_counts().reset_index()
 region_data.columns = ['City', 'Number of Referrals']
+
+st.subheader("Top Regions for You")
 
 st.altair_chart(
     alt.Chart(region_data)
@@ -205,3 +168,67 @@ st.altair_chart(
     ),
     use_container_width=True
 )
+
+# Pre-auth form
+st.title("Pre-Authorization Manager")
+
+# Create a dropdown to select a referral for the pre-auth form
+selected_referral_id = st.selectbox("Select Referral ID", df['referral_id'].tolist())
+
+# Filter data for the selected referral
+selected_referral = df[df['referral_id'] == selected_referral_id].iloc[0]
+
+# Pre-auth form
+with st.form(key='pre_auth_form'):
+    st.subheader("Patient Information")
+    patient_name = st.text_input("Name", value=selected_referral["patient_name"])
+    patient_age = st.number_input("Age", value=selected_referral["patient_age"])
+    patient_gender = st.selectbox("Gender", ["Male", "Female"], index=0)  # Assuming gender is not in the data, default to "Male"
+    patient_contact = st.text_input("Contact Number", value=selected_referral["patient_mobile"])
+
+    st.subheader("Insurance Details")
+    insurance_provider = st.text_input("Insurance Provider", value=selected_referral["tpa_partner_name"])
+    policy_number = st.text_input("Policy Number", "Sample Policy Number")  # Placeholder, update as needed
+    coverage_details = st.text_input("Coverage Details", "Sample Coverage Details")  # Placeholder, update as needed
+
+    st.subheader("Medical History")
+    requested_treatment = st.text_input("Requested Treatment", "Sample Treatment")  # Placeholder, update as needed
+    diagnosis = st.text_input("Diagnosis", "Sample Diagnosis")  # Placeholder, update as needed
+    proposed_date = st.date_input("Proposed Date", pd.to_datetime("2024-09-15"))
+
+    previous_treatments = st.text_area("Previous Treatments", "Sample Previous Treatments")  # Placeholder, update as needed
+    current_medications = st.text_area("Current Medications", "Sample Current Medications")  # Placeholder, update as needed
+    allergies = st.text_area("Allergies", "Sample Allergies")  # Placeholder, update as needed
+
+    st.subheader("Provider Information")
+    hospital_name = st.text_input("Hospital/Clinic Name", "Sample Hospital")  # Placeholder, update as needed
+    doctor_name = st.text_input("Doctor's Name", "Sample Doctor")  # Placeholder, update as needed
+
+    st.subheader("Authorization Request Details")
+    request_date = st.date_input("Date of Request", pd.to_datetime("2024-08-30"))
+
+    # Submit button
+    submit_button = st.form_submit_button("Submit")
+
+    if submit_button:
+        st.success("Pre-Authorization Request Submitted Successfully!")
+        # Display submitted data
+        st.write("Form Data:")
+        st.write({
+            "Name": patient_name,
+            "Age": patient_age,
+            "Gender": patient_gender,
+            "Contact": patient_contact,
+            "Insurance Provider": insurance_provider,
+            "Policy Number": policy_number,
+            "Coverage Details": coverage_details,
+            "Requested Treatment": requested_treatment,
+            "Diagnosis": diagnosis,
+            "Proposed Date": proposed_date,
+            "Previous Treatments": previous_treatments,
+            "Current Medications": current_medications,
+            "Allergies": allergies,
+            "Hospital Name": hospital_name,
+            ""Doctor's Name": doctor_name,
+            "Request Date": request_date
+        })

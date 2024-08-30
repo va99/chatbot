@@ -9,13 +9,13 @@ st.set_page_config(
     page_icon=":hospital:",  # This is an emoji shortcode. Could be a URL too.
 )
 
-# Mock Data for Referrals
+# Mock Data for Referrals in India
 data = [
-    {"id": 1, "referral_id": "R001", "patient_name": "John Doe", "patient_age": 45, "patient_mobile": "9876543210", "tpa_partner": "TPA1", "city": "New York"},
-    {"id": 2, "referral_id": "R002", "patient_name": "Jane Smith", "patient_age": 34, "patient_mobile": "8765432109", "tpa_partner": "TPA2", "city": "Los Angeles"},
-    {"id": 3, "referral_id": "R003", "patient_name": "Alice Brown", "patient_age": 29, "patient_mobile": "7654321098", "tpa_partner": "TPA3", "city": "Chicago"},
-    {"id": 4, "referral_id": "R004", "patient_name": "Bob Johnson", "patient_age": 52, "patient_mobile": "6543210987", "tpa_partner": "TPA1", "city": "New York"},
-    {"id": 5, "referral_id": "R005", "patient_name": "Carol White", "patient_age": 41, "patient_mobile": "5432109876", "tpa_partner": "TPA2", "city": "Los Angeles"}
+    {"id": 1, "referral_id": "R001", "patient_name": "Amit Sharma", "patient_age": 45, "patient_mobile": "9876543210", "tpa_partner": "TPA1", "city": "Mumbai"},
+    {"id": 2, "referral_id": "R002", "patient_name": "Anita Singh", "patient_age": 34, "patient_mobile": "8765432109", "tpa_partner": "TPA2", "city": "Delhi"},
+    {"id": 3, "referral_id": "R003", "patient_name": "Raj Patel", "patient_age": 29, "patient_mobile": "7654321098", "tpa_partner": "TPA3", "city": "Bengaluru"},
+    {"id": 4, "referral_id": "R004", "patient_name": "Sita Gupta", "patient_age": 52, "patient_mobile": "6543210987", "tpa_partner": "TPA1", "city": "Mumbai"},
+    {"id": 5, "referral_id": "R005", "patient_name": "Ravi Kumar", "patient_age": 41, "patient_mobile": "5432109876", "tpa_partner": "TPA2", "city": "Delhi"}
 ]
 
 # Convert mock data to DataFrame
@@ -23,7 +23,7 @@ df = pd.DataFrame(data)
 
 # Calculate total patients and revenue
 total_patients = len(df)
-revenue_per_patient = 1299
+revenue_per_patient = 1299  # USD
 total_revenue = total_patients * revenue_per_patient
 
 # Generate random times saved data
@@ -53,11 +53,11 @@ st.button(
 
 # Display Total Patients and Revenue
 st.write(f"**Total Patients**: {total_patients}")
-st.write(f"**Revenue**: ${total_revenue:,.2f}")
+st.write(f"**Revenue**: ₹{total_revenue * 82.3:,.2f}")  # Converting USD to INR (1 USD = 82.3 INR approximately)
 
 # Visualization: Bed Occupancy
 
-# Placeholder data for bed occupancy
+# Placeholder data for bed occupancy in India
 bed_occupancy_data = pd.DataFrame({
     'Unit': ['ICU', 'General Ward', 'Emergency', 'Maternity', 'Pediatrics'],
     'Occupied': [10, 30, 5, 8, 15],

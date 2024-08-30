@@ -5,6 +5,7 @@ import streamlit as st
 import altair as alt
 import pandas as pd
 import openai
+import os  # Add this line
 
 # Set the OpenAI API key from an environment variable
 openai.api_key = os.getenv('OPENAI_API_KEY')

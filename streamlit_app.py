@@ -11,11 +11,11 @@ st.set_page_config(
 
 # Mock Data for Referrals in India
 data = [
-    {"id": 1, "referral_id": "R001", "patient_name": "Amit Sharma", "patient_age": 45, "patient_mobile": "9876543210", "tpa_partner": "TPA1", "city": "Mumbai"},
-    {"id": 2, "referral_id": "R002", "patient_name": "Anita Singh", "patient_age": 34, "patient_mobile": "8765432109", "tpa_partner": "TPA2", "city": "Delhi"},
-    {"id": 3, "referral_id": "R003", "patient_name": "Raj Patel", "patient_age": 29, "patient_mobile": "7654321098", "tpa_partner": "TPA3", "city": "Bengaluru"},
-    {"id": 4, "referral_id": "R004", "patient_name": "Sita Gupta", "patient_age": 52, "patient_mobile": "6543210987", "tpa_partner": "TPA1", "city": "Mumbai"},
-    {"id": 5, "referral_id": "R005", "patient_name": "Ravi Kumar", "patient_age": 41, "patient_mobile": "5432109876", "tpa_partner": "TPA2", "city": "Delhi"}
+    {"id": 1, "referral_id": "R001", "patient_name": "Amit Sharma", "patient_age": 45, "patient_mobile": "9876543210", "mode_of_payment": "TPA", "tpa_partner": "TPA1", "city": "Mumbai"},
+    {"id": 2, "referral_id": "R002", "patient_name": "Anita Singh", "patient_age": 34, "patient_mobile": "8765432109", "mode_of_payment": "Cash", "tpa_partner": None, "city": "Delhi"},
+    {"id": 3, "referral_id": "R003", "patient_name": "Raj Patel", "patient_age": 29, "patient_mobile": "7654321098", "mode_of_payment": "TPA", "tpa_partner": "TPA3", "city": "Bengaluru"},
+    {"id": 4, "referral_id": "R004", "patient_name": "Sita Gupta", "patient_age": 52, "patient_mobile": "6543210987", "mode_of_payment": "TPA", "tpa_partner": "TPA1", "city": "Mumbai"},
+    {"id": 5, "referral_id": "R005", "patient_name": "Ravi Kumar", "patient_age": 41, "patient_mobile": "5432109876", "mode_of_payment": "Cash", "tpa_partner": None, "city": "Delhi"}
 ]
 
 # Convert mock data to DataFrame
@@ -88,7 +88,9 @@ st.altair_chart(
 
 # Visualization: Best-Selling TPAs
 
-tpa_data = df['tpa_partner'].value_counts().reset_index()
+# Extract only TPA entries for this visualization
+tpa_df = df[df['mode_of_payment'] == 'TPA']
+tpa_data = tpa_df['tpa_partner'].value_counts().reset_index()
 tpa_data.columns = ['TPA Partner', 'Count']
 
 st.subheader("Best-Selling TPAs")

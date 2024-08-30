@@ -77,17 +77,6 @@ df['time_saved_minutes'] = np.random.randint(5, 15, size=len(df))  # Random minu
 total_minutes_saved = df['time_saved_minutes'].sum()
 total_hours_saved = total_minutes_saved / 60
 
-# Display metrics at the top in a bold section
-st.markdown(
-    f"""
-    ### **Total Patients: {total_patients}**
-    **Revenue (INR): ₹{total_revenue_inr:,.2f}**
-    **Cash Patients: {cash_patients}**
-    **TPA Patients: {tpa_patients}**
-    """,
-    unsafe_allow_html=True
-)
-
 # Display data with editable table
 edited_df = st.data_editor(
     df,

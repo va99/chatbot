@@ -2,8 +2,6 @@ import streamlit as st
 import altair as alt
 import pandas as pd
 import numpy as np
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.preprocessing import LabelEncoder
 
 # Set the title and favicon that appear in the Browser's tab bar.
 st.set_page_config(
@@ -115,19 +113,15 @@ with st.form(key='pre_auth_form'):
     treatment = st.selectbox("Treatment", ["Surgery", "Consultation", "Medication"])
     submission_date = st.date_input("Submission Date")
     
-    # Simulated ML model for prediction (e.g., predicting the status of the pre-auth request)
-    if st.form_submit_button("Predict and Submit"):
-        # Simulate ML prediction
+    # Simulated prediction
+    if st.form_submit_button("Submit"):
+        # Simulate some prediction logic
+        status = np.random.choice(["Pending", "Approved", "Rejected"])
+        
         st.write(f"Patient Name: {patient_name}")
         st.write(f"Patient Age: {patient_age}")
         st.write(f"Treatment: {treatment}")
         st.write(f"Submission Date: {submission_date}")
-        
-        # Simulated machine learning prediction (e.g., treatment classification)
-        # Here, we just use random selection for simulation
-        statuses = ["Pending", "Approved", "Rejected"]
-        status = np.random.choice(statuses)
-        
         st.write(f"Predicted Status: {status}")
         
         # In a real application, here you would process the submission

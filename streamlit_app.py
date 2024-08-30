@@ -8,7 +8,6 @@ st.set_page_config(
     page_title="Referral Patient Tracker",
     page_icon=":hospital:",  # This is an emoji shortcode. Could be a URL too.
 )
-
 # Mock Data for Referrals
 data = [
     {"id": 1, "referral_id": "R001", "patient_name": "John Doe", "patient_age": 45, "patient_mobile": "9876543210", "tpa_partner": "TPA1"},

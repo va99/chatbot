@@ -8,7 +8,7 @@ import pandas as pd
 # Set the title and favicon that appear in the Browser's tab bar.
 st.set_page_config(
     page_title="Referral Patient Tracker",
-    page_icon=":hospital:",  # This is an emoji shortcode. Could be a URL too.
+    page_icon=":hospital:"  # This is an emoji shortcode. Could be a URL too.
 )
 
 # -----------------------------------------------------------------------------
@@ -158,54 +158,24 @@ st.button(
 )
 
 # -----------------------------------------------------------------------------
-# Visualization: Bed Occupancy
+# Visualization: TPA Referrals Breakdown
 
-# Placeholder data for bed occupancy
-bed_occupancy_data = pd.DataFrame({
-    'Unit': ['ICU', 'General Ward', 'Emergency', 'Maternity', 'Pediatrics'],
-    'Occupied': [10, 30, 5, 8, 15],
-    'Total': [15, 50, 10, 12, 20]
-})
+# Transforming the data for visualization
+tpa_breakdown = df.groupby(['mode_of_payment', 'tpa_partner']).size().reset_index(name='Count')
 
-bed_occupancy_data['Available'] = bed_occupancy_data['Total'] - bed_occupancy_data['Occupied']
-
-st.subheader("Bed Occupancy")
+st.subheader("TPA Referrals Breakdown")
 
 st.altair_chart(
-    alt.Chart(bed_occupancy_data)
-    .mark_bar()
-    .encode(
-        x=alt.X('Unit', title='Unit'),
-        y=alt.Y('Available', title='Available Beds'),
-        color='Unit'
-    )
-    .properties(
-        title="Bed Occupancy"
-    )
-    .interactive()
-    .configure_axis(
-        labelAngle=0
-    ),
-    use_container_width=True
-)
-
-# -----------------------------------------------------------------------------
-# Visualization: Best-Selling TPAs
-
-tpa_data = df['tpa_partner'].value_counts().reset_index()
-tpa_data.columns = ['TPA Partner', 'Count']
-
-st.subheader("Best-Selling TPAs")
-
-st.altair_chart(
-    alt.Chart(tpa_data)
+    alt.Chart(tpa_breakdown)
     .mark_bar()
     .encode(
         x=alt.X('Count', title='Number of Referrals'),
-        y=alt.Y('TPA Partner:N', title='TPA Partner')
+        y=alt.Y('tpa_partner:N', title='TPA Partner'),
+        color='mode_of_payment:N',
+        column='mode_of_payment:N'
     )
     .properties(
-        title="Best-Selling TPAs"
+        title="Referrals by TPA Partner and Payment Mode"
     )
     .interactive()
     .configure_axis(
@@ -230,7 +200,7 @@ st.altair_chart(
     .mark_bar()
     .encode(
         x=alt.X('Process', title='Process'),
-        y=alt.Y('Hours', title='Hours Saved'),
+        y=alt.Y('Hours', title='Hours'),
         color='Process'
     )
     .properties(

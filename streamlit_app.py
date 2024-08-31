@@ -1,90 +1,269 @@
+from collections import defaultdict
+from pathlib import Path
+import sqlite3
 import streamlit as st
-import pandas as pd
-import numpy as np
 import altair as alt
+import pandas as pd
 
-# Set up the page title and icon
-st.set_page_config(page_title="Hospital Admin Dashboard", page_icon="🏥")
+# Set the title and favicon that appear in the Browser's tab bar.
+st.set_page_config(
+    page_title="Referral Patient Tracker",
+    page_icon=":hospital:",  # This is an emoji shortcode. Could be a URL too.
+)
 
-# Mock TPA data
-tpa_data = {
-    "01": "Medi Assist", "02": "Paramount Health Services", "03": "FHPL",
-    "04": "Health India TPA", "05": "Star Health", "06": "Apollo Munich",
-    "07": "ICICI Lombard", "08": "UnitedHealthcare", "09": "Religare Health Insurance",
-    "10": "HDFC ERGO", "11": "Max Bupa", "12": "SBI Health Insurance", "13": "New India Assurance",
-    "14": "Oriental Insurance", "15": "National Insurance", "16": "United India Insurance",
-    "17": "IFFCO Tokio", "18": "Cholamandalam MS", "19": "Bajaj Allianz", "20": "Reliance General Insurance"
-}
+# -----------------------------------------------------------------------------
+# Declare some useful functions.
 
-# Generate mock data for patients and TPAs
-np.random.seed(42)
-cities = ["Mumbai", "Delhi", "Bengaluru", "Chennai", "Hyderabad"]
-modes = ["TPA", "Cash"]
-data = [{
-    "id": i + 1, "referral_id": f"R{str(i + 1).zfill(3)}", "patient_name": f"Patient {i + 1}",
-    "patient_age": np.random.randint(20, 80), "patient_mobile": f"9{np.random.randint(100000000, 999999999)}",
-    "mode_of_payment": np.random.choice(modes), "tpa_partner": np.random.choice(list(tpa_data.keys())) if np.random.choice(modes) == "TPA" else None,
-    "city": np.random.choice(cities)
-} for i in range(100)]
+def connect_db():
+    """Connects to the sqlite database."""
+    DB_FILENAME = Path(__file__).parent / "referral_patient_tracker.db"
+    db_already_exists = DB_FILENAME.exists()
+    conn = sqlite3.connect(DB_FILENAME)
+    db_was_just_created = not db_already_exists
+    return conn, db_was_just_created
 
-df = pd.DataFrame(data)
-df['tpa_partner_name'] = df['tpa_partner'].map(tpa_data).fillna('N/A')
+def initialize_data(conn):
+    """Initializes the referral patient tracker table with some data."""
+    cursor = conn.cursor()
 
-# Metrics
-total_patients = len(df)
-total_revenue_inr = total_patients * 1299 * 82.3
-cash_patients = df['mode_of_payment'].value_counts().get('Cash', 0)
-tpa_patients = df['mode_of_payment'].value_counts().get('TPA', 0)
+    cursor.execute(
+        """
+        CREATE TABLE IF NOT EXISTS referrals (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            referral_id TEXT,
+            patient_name TEXT,
+            patient_age INTEGER,
+            patient_mobile TEXT,
+            tpa_partner TEXT
+        )
+        """
+    )
 
-# Display metrics
-col1, col2, col3, col4 = st.columns(4)
-with col1: st.metric("Total Patients", total_patients)
-with col2: st.metric("Revenue (INR)", f"₹{total_revenue_inr:,.2f}")
-with col3: st.metric("Cash Patients", cash_patients)
-with col4: st.metric("TPA Patients", tpa_patients)
+    cursor.execute(
+        """
+        INSERT INTO referrals
+            (referral_id, patient_name, patient_age, patient_mobile, tpa_partner)
+        VALUES
+            ('R001', 'John Doe', 45, '9876543210', 'TPA1'),
+            ('R002', 'Jane Smith', 34, '8765432109', 'TPA2'),
+            ('R003', 'Alice Brown', 29, '7654321098', 'TPA3'),
+            ('R004', 'Bob Johnson', 52, '6543210987', 'TPA1'),
+            ('R005', 'Carol White', 41, '5432109876', 'TPA2')
+        """
+    )
+    conn.commit()
 
-# TPA Partner Distribution
-st.subheader("TPA Partner Distribution")
-tpa_distribution = df['tpa_partner_name'].value_counts().reset_index()
-tpa_distribution.columns = ['TPA Partner', 'Count']
-chart_tpa = alt.Chart(tpa_distribution).mark_bar().encode(
-    x=alt.X('Count:Q', title='Number of Patients'),
-    y=alt.Y('TPA Partner:N', sort='-x', title='TPA Partner')
-).properties(width=700)
-st.altair_chart(chart_tpa)
+def load_data(conn):
+    """Loads the referral patient data from the database."""
+    cursor = conn.cursor()
+    try:
+        cursor.execute("SELECT * FROM referrals")
+        data = cursor.fetchall()
+    except:
+        return None
 
-# Bed Occupancy Data
-st.subheader("Bed Occupancy")
+    df = pd.DataFrame(
+        data,
+        columns=[
+            "id",
+            "referral_id",
+            "patient_name",
+            "patient_age",
+            "patient_mobile",
+            "tpa_partner",
+        ],
+    )
+    return df
+
+def update_data(conn, df, changes):
+    """Updates the referral patient data in the database."""
+    cursor = conn.cursor()
+
+    if changes["edited_rows"]:
+        deltas = st.session_state.referrals_table["edited_rows"]
+        rows = []
+        for i, delta in deltas.items():
+            row_dict = df.iloc[i].to_dict()
+            row_dict.update(delta)
+            rows.append(row_dict)
+
+        cursor.executemany(
+            """
+            UPDATE referrals
+            SET
+                referral_id = :referral_id,
+                patient_name = :patient_name,
+                patient_age = :patient_age,
+                patient_mobile = :patient_mobile,
+                tpa_partner = :tpa_partner
+            WHERE id = :id
+            """,
+            rows,
+        )
+
+    if changes["added_rows"]:
+        cursor.executemany(
+            """
+            INSERT INTO referrals
+                (id, referral_id, patient_name, patient_age, patient_mobile, tpa_partner)
+            VALUES
+                (:id, :referral_id, :patient_name, :patient_age, :patient_mobile, :tpa_partner)
+            """,
+            (defaultdict(lambda: None, row) for row in changes["added_rows"]),
+        )
+
+    if changes["deleted_rows"]:
+        cursor.executemany(
+            "DELETE FROM referrals WHERE id = :id",
+            ({"id": int(df.loc[i, "id"])} for i in changes["deleted_rows"]),
+        )
+
+    conn.commit()
+
+def add_hospital_to_db(conn, name, description, city, state, total_beds, tpas):
+    """Adds new hospital details to the database."""
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        CREATE TABLE IF NOT EXISTS hospitals (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            hospital_name TEXT,
+            description TEXT,
+            city TEXT,
+            state TEXT,
+            total_beds INTEGER,
+            empanelled_tpas TEXT
+        )
+        """
+    )
+    cursor.execute(
+        """
+        INSERT INTO hospitals (hospital_name, description, city, state, total_beds, empanelled_tpas)
+        VALUES (?, ?, ?, ?, ?, ?)
+        """,
+        (name, description, city, state, total_beds, ", ".join(tpas))
+    )
+    conn.commit()
+
+# -----------------------------------------------------------------------------
+# Define TPA options (Mock Data from Doctor App)
+tpa_options = ["TPA1", "TPA2", "TPA3"]
+
+# Form for adding hospital information
+if 'form_submitted' not in st.session_state:
+    st.session_state['form_submitted'] = False
+
+if not st.session_state['form_submitted']:
+    st.sidebar.header("Add New Hospital Information")
+
+    with st.sidebar.form(key='hospital_form'):
+        st.header("Hospital Information Form")
+        hospital_name = st.text_input("Hospital Name")
+        description = st.text_area("A brief description", max_chars=300)
+        city = st.text_input("City")
+        state = st.text_input("State")
+        total_beds = st.number_input("Total Bed Units", min_value=1)
+        
+        # Multi-selection list for Empanelled TPA
+        empanelled_tpas = st.multiselect("Empanelled TPA", options=tpa_options)
+        
+        submit_button = st.form_submit_button(label='Submit')
+        
+        if submit_button:
+            try:
+                add_hospital_to_db(conn, hospital_name, description, city, state, total_beds, empanelled_tpas)
+                st.session_state['form_submitted'] = True
+                st.experimental_rerun()  # Refresh the app to show the new screen
+            except Exception as e:
+                st.error(f"Error occurred while submitting the form: {e}")
+
+else:
+    # Display a message on the new screen
+    st.title(f"HELLO {hospital_name}")
+    st.write("Thank you for submitting your details. The hospital has been added.")
+    st.write("You can now navigate to the referral tracking screen from the sidebar.")
+
+# -----------------------------------------------------------------------------
+# Home screen content if form has been submitted
+if st.session_state['form_submitted']:
+    st.title(f"HELLO {hospital_name}")
+
+# Connect to database and create table if needed
+conn, db_was_just_created = connect_db()
+
+# Initialize data.
+if db_was_just_created:
+    initialize_data(conn)
+    st.toast("Database initialized with some sample data.")
+
+# Load data from database
+df = load_data(conn)
+
+# Display data with editable table
+edited_df = st.data_editor(
+    df,
+    disabled=["id"],  # Don't allow editing the 'id' column.
+    num_rows="dynamic",  # Allow appending/deleting rows.
+    key="referrals_table",
+)
+
+has_uncommitted_changes = any(len(v) for v in st.session_state.referrals_table.values())
+
+st.button(
+    "Commit changes",
+    type="primary",
+    disabled=not has_uncommitted_changes,
+    # Update data in database
+    on_click=update_data,
+    args=(conn, df, st.session_state.referrals_table),
+)
+
+# -----------------------------------------------------------------------------
+# Visualization: Bed Occupancy
+
+# Placeholder data for bed occupancy
 bed_occupancy_data = pd.DataFrame({
     'Unit': ['ICU', 'General Ward', 'Emergency', 'Maternity', 'Pediatrics'],
     'Occupied': [10, 30, 5, 8, 15],
     'Total': [15, 50, 10, 12, 20]
 })
+
 bed_occupancy_data['Available'] = bed_occupancy_data['Total'] - bed_occupancy_data['Occupied']
-chart_bed = alt.Chart(bed_occupancy_data).mark_bar().encode(
-    x=alt.X('Available:Q', title='Available Beds'),
-    y=alt.Y('Unit:N', sort='-x', title='Unit')
-).properties(width=700)
-st.altair_chart(chart_bed)
 
-# Top Regions
-st.subheader("Top Regions")
-region_data = df['city'].value_counts().reset_index()
-region_data.columns = ['City', 'Number of Referrals']
-chart_region = alt.Chart(region_data).mark_bar().encode(
-    x=alt.X('Number of Referrals:Q', title='Number of Referrals'),
-    y=alt.Y('City:N', sort='-x', title='City')
-).properties(width=700)
-st.altair_chart(chart_region)
+st.subheader("Bed Occupancy")
 
-# Display the DataFrame for detailed view
-st.subheader("Detailed Data View")
-st.dataframe(df)
+st.altair_chart(
+    alt.Chart(bed_occupancy_data)
+    .mark_bar()
+    .encode(
+        x=alt.X('Unit', title='Unit'),
+        y=alt.Y('Available', title='Available Beds'),
+        color='Unit'
+    )
+    .properties(
+        title="Bed Occupancy"
+    )
+    .interactive()
+    .configure_axis(
+        labelAngle=0
+    ),
+    use_container_width=True
+)
 
-# Optionally download the data
-st.download_button(
-    label="Download Data as CSV",
-    data=df.to_csv(index=False).encode('utf-8'),
-    file_name='hospital_admin_data.csv',
-    mime='text/csv'
+# -----------------------------------------------------------------------------
+# Visualization: Best-Selling TPAs
+
+tpa_data = df['tpa_partner'].value_counts().reset_index()
+tpa_data.columns = ['TPA Partner', 'Count']
+
+st.subheader("Best-Selling TPAs")
+
+st.altair_chart(
+    alt.Chart(tpa_data)
+    .mark_bar()
+    .encode(
+        x=alt.X('Count', title='Number of Referrals'),
+        y=alt.Y('TPA Partner', title='TPA Partner')
+    ),
+    use_container_width=True
 )

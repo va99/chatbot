@@ -1,12 +1,10 @@
-from collections import defaultdict
 from pathlib import Path
 import sqlite3
 import streamlit as st
 import altair as alt
 import pandas as pd
 
-
-# Set the title and favicon that appear in the Browser's tab bar.
+# Set the title and favicon that appear in the browser's tab bar.
 st.set_page_config(
     page_title="Referral Patient Tracker",
     page_icon=":hospital:",  # This is an emoji shortcode. Could be a URL too.
@@ -16,10 +14,10 @@ st.set_page_config(
 # Declare some useful functions.
 
 def connect_db():
-    """Connects to the sqlite database."""
-    DB_FILENAME = Path(__file__).parent / "referral_patient_tracker.db"
-    db_already_exists = DB_FILENAME.exists()
-    conn = sqlite3.connect(DB_FILENAME)
+    """Connects to the SQLite database."""
+    db_filename = Path(__file__).parent / "referral_patient_tracker.db"
+    db_already_exists = db_filename.exists()
+    conn = sqlite3.connect(db_filename)
     db_was_just_created = not db_already_exists
     return conn, db_was_just_created
 
@@ -60,7 +58,8 @@ def load_data(conn):
     try:
         cursor.execute("SELECT * FROM referrals")
         data = cursor.fetchall()
-    except:
+    except sqlite3.Error as e:
+        st.error(f"Error loading data: {e}")
         return None
 
     df = pd.DataFrame(
@@ -106,9 +105,9 @@ def update_data(conn, df, changes):
         cursor.executemany(
             """
             INSERT INTO referrals
-                (id, referral_id, patient_name, patient_age, patient_mobile, tpa_partner)
+                (referral_id, patient_name, patient_age, patient_mobile, tpa_partner)
             VALUES
-                (:id, :referral_id, :patient_name, :patient_age, :patient_mobile, :tpa_partner)
+                (:referral_id, :patient_name, :patient_age, :patient_mobile, :tpa_partner)
             """,
             (defaultdict(lambda: None, row) for row in changes["added_rows"]),
         )
@@ -121,112 +120,37 @@ def update_data(conn, df, changes):
 
     conn.commit()
 
-def add_hospital_to_db(conn, name, description, city, state, total_beds, tpas):
-    """Adds new hospital details to the database."""
-    cursor = conn.cursor()
-    cursor.execute(
-        """
-        CREATE TABLE IF NOT EXISTS hospitals (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            hospital_name TEXT,
-            description TEXT,
-            city TEXT,
-            state TEXT,
-            total_beds INTEGER,
-            empanelled_tpas TEXT
-        )
-        """
-    )
-    cursor.execute(
-        """
-        INSERT INTO hospitals (hospital_name, description, city, state, total_beds, empanelled_tpas)
-        VALUES (?, ?, ?, ?, ?, ?)
-        """,
-        (name, description, city, state, total_beds, ", ".join(tpas))
-    )
-    conn.commit()
-
-def query_llm(prompt):
-    """Query the LLM with a given prompt."""
-    response = openai.Completion.create(
-        engine="text-davinci-003",
-        prompt=prompt,
-        max_tokens=150
-    )
-    return response.choices[0].text.strip()
-
 # -----------------------------------------------------------------------------
-# Define TPA options (Mock Data from Doctor App)
-tpa_options = ["TPA1", "TPA2", "TPA3"]
-
-# Form for adding hospital information
-if 'form_submitted' not in st.session_state:
-    st.session_state['form_submitted'] = False
-
-if not st.session_state['form_submitted']:
-    st.sidebar.header("Add New Hospital Information")
-
-    with st.sidebar.form(key='hospital_form'):
-        st.header("Hospital Information Form")
-        hospital_name = st.text_input("Hospital Name")
-        description = st.text_area("A brief description", max_chars=300)
-        city = st.text_input("City")
-        state = st.text_input("State")
-        total_beds = st.number_input("Total Bed Units", min_value=1)
-        
-        # Multi-selection list for Empanelled TPA
-        empanelled_tpas = st.multiselect("Empanelled TPA", options=tpa_options)
-        
-        submit_button = st.form_submit_button(label='Submit')
-        
-        if submit_button:
-            try:
-                add_hospital_to_db(conn, hospital_name, description, city, state, total_beds, empanelled_tpas)
-                st.session_state['form_submitted'] = True
-                st.experimental_rerun()  # Refresh the app to show the new screen
-            except Exception as e:
-                st.error(f"Error occurred while submitting the form: {e}")
-
-else:
-    # Display a message on the new screen
-    st.title(f"HELLO {hospital_name}")
-    st.write("Thank you for submitting your details. The hospital has been added.")
-    st.write("You can now navigate to the referral tracking screen from the sidebar.")
-
-# -----------------------------------------------------------------------------
-# Home screen content if form has been submitted
-if st.session_state['form_submitted']:
-    st.title(f"HELLO {hospital_name}")
-
-# Connect to database and create table if needed
+# Connect to the database and create table if needed
 conn, db_was_just_created = connect_db()
 
-# Initialize data.
+# Initialize data
 if db_was_just_created:
     initialize_data(conn)
     st.toast("Database initialized with some sample data.")
 
-# Load data from database
+# Load data from the database
 df = load_data(conn)
 
-# Display data with editable table
-edited_df = st.data_editor(
-    df,
-    disabled=["id"],  # Don't allow editing the 'id' column.
-    num_rows="dynamic",  # Allow appending/deleting rows.
-    key="referrals_table",
-)
+# Display data with an editable table
+if df is not None:
+    edited_df = st.data_editor(
+        df,
+        disabled=["id"],  # Don't allow editing the 'id' column.
+        num_rows="dynamic",  # Allow appending/deleting rows.
+        key="referrals_table",
+    )
 
-has_uncommitted_changes = any(len(v) for v in st.session_state.referrals_table.values())
+    has_uncommitted_changes = any(len(v) for v in st.session_state.referrals_table.values())
 
-st.button(
-    "Commit changes",
-    type="primary",
-    disabled=not has_uncommitted_changes,
-    # Update data in database
-    on_click=update_data,
-    args=(conn, df, st.session_state.referrals_table),
-)
+    st.button(
+        "Commit changes",
+        type="primary",
+        disabled=not has_uncommitted_changes,
+        # Update data in the database
+        on_click=update_data,
+        args=(conn, df, st.session_state.referrals_table),
+    )
 
 # -----------------------------------------------------------------------------
 # Visualization: Bed Occupancy
@@ -263,14 +187,26 @@ st.altair_chart(
 # -----------------------------------------------------------------------------
 # Visualization: Best-Selling TPAs
 
-tpa_data = df['tpa_partner'].value_counts().reset_index()
-tpa_data.columns = ['TPA Partner', 'Count']
+if df is not None:
+    tpa_data = df['tpa_partner'].value_counts().reset_index()
+    tpa_data.columns = ['TPA Partner', 'Count']
 
-st.subheader("Best-Selling TPAs")
+    st.subheader("Best-Selling TPAs")
 
-st.altair_chart(
-    alt.Chart(tpa_data)
-    .mark_bar()
-    .encode(
-        x=alt.X('Count', title='Number of Referrals'),
-        y=alt.Y('
+    st.altair_chart(
+        alt.Chart(tpa_data)
+        .mark_bar()
+        .encode(
+            x=alt.X('Count', title='Number of Referrals'),
+            y=alt.Y('TPA Partner', sort='-x', title='TPA Partner'),
+            color='TPA Partner'
+        )
+        .properties(
+            title="Best-Selling TPAs"
+        )
+        .interactive()
+        .configure_axis(
+            labelAngle=0
+        ),
+        use_container_width=True
+    )

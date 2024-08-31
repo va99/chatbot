@@ -1,6 +1,7 @@
 from collections import defaultdict
 from pathlib import Path
 import sqlite3
+
 import streamlit as st
 import altair as alt
 import pandas as pd
@@ -16,10 +17,13 @@ st.set_page_config(
 
 def connect_db():
     """Connects to the sqlite database."""
+
     DB_FILENAME = Path(__file__).parent / "referral_patient_tracker.db"
     db_already_exists = DB_FILENAME.exists()
+
     conn = sqlite3.connect(DB_FILENAME)
     db_was_just_created = not db_already_exists
+
     return conn, db_was_just_created
 
 def initialize_data(conn):
@@ -48,7 +52,33 @@ def initialize_data(conn):
             ('R002', 'Jane Smith', 34, '8765432109', 'TPA2'),
             ('R003', 'Alice Brown', 29, '7654321098', 'TPA3'),
             ('R004', 'Bob Johnson', 52, '6543210987', 'TPA1'),
-            ('R005', 'Carol White', 41, '5432109876', 'TPA2')
+            ('R005', 'Carol White', 41, '5432109876', 'TPA2'),
+            ('R006', 'David Lee', 37, '4321098765', 'TPA3'),
+            ('R007', 'Emily Davis', 26, '3210987654', 'TPA4'),
+            ('R008', 'Frank Wilson', 55, '2109876543', 'TPA5'),
+            ('R009', 'Grace Martinez', 30, '1098765432', 'TPA6'),
+            ('R010', 'Henry Taylor', 48, '9876504321', 'TPA7'),
+            ('R011', 'Ivy Anderson', 42, '8765432101', 'TPA8'),
+            ('R012', 'Jack Thomas', 31, '7654321097', 'TPA9'),
+            ('R013', 'Kara White', 39, '6543210986', 'TPA10'),
+            ('R014', 'Leo Harris', 28, '5432109875', 'TPA11'),
+            ('R015', 'Mia Clark', 49, '4321098764', 'TPA12'),
+            ('R016', 'Noah Lewis', 27, '3210987653', 'TPA13'),
+            ('R017', 'Olivia Walker', 33, '2109876542', 'TPA14'),
+            ('R018', 'Paul Scott', 40, '1098765431', 'TPA15'),
+            ('R019', 'Quinn Adams', 50, '9876543219', 'TPA16'),
+            ('R020', 'Rachel Baker', 32, '8765432108', 'TPA17'),
+            ('R021', 'Steve Nelson', 44, '7654321096', 'TPA18'),
+            ('R022', 'Tina Carter', 38, '6543210985', 'TPA19'),
+            ('R023', 'Ursula Mitchell', 25, '5432109874', 'TPA20'),
+            ('R024', 'Victor Roberts', 43, '4321098763', 'TPA21'),
+            ('R025', 'Wendy Gonzalez', 29, '3210987652', 'TPA22'),
+            ('R026', 'Xander Turner', 47, '2109876541', 'TPA23'),
+            ('R027', 'Yara Collins', 36, '1098765430', 'TPA24'),
+            ('R028', 'Zane Stewart', 53, '9876543218', 'TPA25'),
+            ('R029', 'Amy Cooper', 41, '8765432107', 'TPA26'),
+            ('R030', 'Ben Simmons', 34, '7654321095', 'TPA27'),
+            ('R031', 'Clara Gray', 46, '6543210984', 'TPA28')
         """
     )
     conn.commit()
@@ -56,6 +86,7 @@ def initialize_data(conn):
 def load_data(conn):
     """Loads the referral patient data from the database."""
     cursor = conn.cursor()
+
     try:
         cursor.execute("SELECT * FROM referrals")
         data = cursor.fetchall()
@@ -73,6 +104,7 @@ def load_data(conn):
             "tpa_partner",
         ],
     )
+
     return df
 
 def update_data(conn, df, changes):
@@ -82,6 +114,7 @@ def update_data(conn, df, changes):
     if changes["edited_rows"]:
         deltas = st.session_state.referrals_table["edited_rows"]
         rows = []
+
         for i, delta in deltas.items():
             row_dict = df.iloc[i].to_dict()
             row_dict.update(delta)
@@ -120,73 +153,23 @@ def update_data(conn, df, changes):
 
     conn.commit()
 
-def add_hospital_to_db(conn, name, description, city, state, total_beds, tpas):
-    """Adds new hospital details to the database."""
-    cursor = conn.cursor()
-    cursor.execute(
-        """
-        CREATE TABLE IF NOT EXISTS hospitals (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            hospital_name TEXT,
-            description TEXT,
-            city TEXT,
-            state TEXT,
-            total_beds INTEGER,
-            empanelled_tpas TEXT
-        )
-        """
-    )
-    cursor.execute(
-        """
-        INSERT INTO hospitals (hospital_name, description, city, state, total_beds, empanelled_tpas)
-        VALUES (?, ?, ?, ?, ?, ?)
-        """,
-        (name, description, city, state, total_beds, ", ".join(tpas))
-    )
-    conn.commit()
-
 # -----------------------------------------------------------------------------
-# Define TPA options (Mock Data from Doctor App)
-tpa_options = ["TPA1", "TPA2", "TPA3"]
+# Draw the actual page, starting with the referrals table.
 
-# Form for adding hospital information
-if 'form_submitted' not in st.session_state:
-    st.session_state['form_submitted'] = False
+# Set the title that appears at the top of the page.
+"""
+# :hospital: Referral Patient Tracker
 
-if not st.session_state['form_submitted']:
-    st.sidebar.header("Add New Hospital Information")
+**Welcome to the Referral Patient Tracker!**
+This page reads and writes directly from/to our referral patient database.
+"""
 
-    with st.sidebar.form(key='hospital_form'):
-        st.header("Hospital Information Form")
-        hospital_name = st.text_input("Hospital Name")
-        description = st.text_area("A brief description", max_chars=300)
-        city = st.text_input("City")
-        state = st.text_input("State")
-        total_beds = st.number_input("Total Bed Units", min_value=1)
-        
-        # Multi-selection list for Empanelled TPA
-        empanelled_tpas = st.multiselect("Empanelled TPA", options=tpa_options)
-        
-        submit_button = st.form_submit_button(label='Submit')
-        
-        if submit_button:
-            try:
-                add_hospital_to_db(conn, hospital_name, description, city, state, total_beds, empanelled_tpas)
-                st.session_state['form_submitted'] = True
-                st.experimental_rerun()  # Refresh the app to show the new screen
-            except Exception as e:
-                st.error(f"Error occurred while submitting the form: {e}")
-
-else:
-    # Display a message on the new screen
-    st.title(f"HELLO {hospital_name}")
-    st.write("Thank you for submitting your details. The hospital has been added.")
-    st.write("You can now navigate to the referral tracking screen from the sidebar.")
-
-# -----------------------------------------------------------------------------
-# Home screen content if form has been submitted
-if st.session_state['form_submitted']:
-    st.title(f"HELLO {hospital_name}")
+st.info(
+    """
+    Use the table below to add, remove, and edit patient referrals.
+    And don't forget to commit your changes when you're done.
+    """
+)
 
 # Connect to database and create table if needed
 conn, db_was_just_created = connect_db()
@@ -204,6 +187,10 @@ edited_df = st.data_editor(
     df,
     disabled=["id"],  # Don't allow editing the 'id' column.
     num_rows="dynamic",  # Allow appending/deleting rows.
+    column_config={
+        "patient_age": st.column_config.NumberColumn(),
+        "patient_mobile": st.column_config.TextColumn(),
+    },
     key="referrals_table",
 )
 
@@ -262,16 +249,4 @@ st.altair_chart(
     alt.Chart(tpa_data)
     .mark_bar()
     .encode(
-        x=alt.X('Count', title='Number of Referrals'),
-        y=alt.Y('TPA Partner', sort='-x', title='TPA Partner'),
-        color='TPA Partner'
-    )
-    .properties(
-        title="Best-Selling TPAs"
-    )
-    .interactive()
-    .configure_axis(
-        labelAngle=0
-    ),
-    use_container_width=True
-)
+        x=alt.X('Count', title

@@ -45,12 +45,15 @@ with col4: st.metric("TPA Patients", tpa_patients)
 
 # Visualizations
 def plot_chart(data, x_col, y_col, color_col=None):
-    chart = alt.Chart(data).mark_bar().encode(
-        x=alt.X(x_col, title='Count'),
-        y=alt.Y(y_col, title='Category'),
-        color=color_col
-    ).properties(title=y_col).interactive()
-    st.altair_chart(chart, use_container_width=True)
+    if not data.empty and x_col in data.columns and y_col in data.columns:
+        chart = alt.Chart(data).mark_bar().encode(
+            x=alt.X(x_col, title='Count'),
+            y=alt.Y(y_col, title='Category'),
+            color=color_col
+        ).properties(title=y_col).interactive()
+        st.altair_chart(chart, use_container_width=True)
+    else:
+        st.warning(f"Insufficient or incorrect data for plotting: {y_col}")
 
 # Bed Occupancy
 bed_occupancy_data = pd.DataFrame({

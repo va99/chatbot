@@ -20,20 +20,12 @@ tpa_data = {
 np.random.seed(0)
 cities = ["Mumbai", "Delhi", "Bengaluru", "Chennai", "Hyderabad"]
 modes = ["TPA", "Cash"]
-data = []
-for i in range(67):
-    mode_of_payment = np.random.choice(modes)
-    tpa_partner = np.random.choice(list(tpa_data.keys())) if mode_of_payment == "TPA" else None
-    data.append({
-        "id": i + 1,
-        "referral_id": f"R{str(i + 1).zfill(3)}",
-        "patient_name": f"Patient {i + 1}",
-        "patient_age": np.random.randint(20, 80),
-        "patient_mobile": f"9{np.random.randint(100000000, 999999999)}",
-        "mode_of_payment": mode_of_payment,
-        "tpa_partner": tpa_partner,
-        "city": np.random.choice(cities)
-    })
+data = [{
+    "id": i + 1, "referral_id": f"R{str(i + 1).zfill(3)}", "patient_name": f"Patient {i + 1}",
+    "patient_age": np.random.randint(20, 80), "patient_mobile": f"9{np.random.randint(100000000, 999999999)}",
+    "mode_of_payment": np.random.choice(modes), "tpa_partner": np.random.choice(list(tpa_data.keys())) if np.random.choice(modes) == "TPA" else None,
+    "city": np.random.choice(cities)
+} for i in range(67)]
 
 df = pd.DataFrame(data)
 df['tpa_partner_name'] = df['tpa_partner'].map(tpa_data).fillna('N/A')
@@ -43,8 +35,6 @@ total_patients = len(df)
 total_revenue_inr = total_patients * 1299 * 82.3
 cash_patients = df['mode_of_payment'].value_counts().get('Cash', 0)
 tpa_patients = df['mode_of_payment'].value_counts().get('TPA', 0)
-total_minutes_saved = df.get('time_saved_minutes', pd.Series([0])).sum()
-total_hours_saved = total_minutes_saved / 60
 
 # Display metrics
 col1, col2, col3, col4 = st.columns(4)
@@ -83,45 +73,3 @@ region_data = df['city'].value_counts().reset_index()
 region_data.columns = ['City', 'Number of Referrals']
 st.subheader("Top Regions for You")
 plot_chart(region_data, 'Number of Referrals', 'City', 'City')
-
-# Pre-auth form
-st.title("Pre-Authorization Manager")
-selected_referral_id = st.selectbox("Select Referral ID", df['referral_id'])
-selected_referral = df[df['referral_id'] == selected_referral_id].iloc[0]
-
-with st.form(key='pre_auth_form'):
-    st.subheader("Patient Information")
-    patient_name = st.text_input("Name", value=selected_referral["patient_name"])
-    patient_age = st.number_input("Age", value=selected_referral["patient_age"])
-    patient_gender = st.selectbox("Gender", ["Male", "Female"], index=0)
-    patient_contact = st.text_input("Contact Number", value=selected_referral["patient_mobile"])
-
-    st.subheader("Insurance Details")
-    insurance_provider = st.text_input("Insurance Provider", value=selected_referral["tpa_partner_name"])
-    policy_number = st.text_input("Policy Number", "Sample Policy Number")
-    coverage_details = st.text_input("Coverage Details", "Sample Coverage Details")
-
-    st.subheader("Medical History")
-    requested_treatment = st.text_input("Requested Treatment", "Sample Treatment")
-    diagnosis = st.text_input("Diagnosis", "Sample Diagnosis")
-    proposed_date = st.date_input("Proposed Date", pd.to_datetime("2024-09-15"))
-    previous_treatments = st.text_area("Previous Treatments", "Sample Previous Treatments")
-    current_medications = st.text_area("Current Medications", "Sample Current Medications")
-    allergies = st.text_area("Allergies", "Sample Allergies")
-
-    st.subheader("Provider Information")
-    hospital_name = st.text_input("Hospital/Clinic Name", "Sample Hospital")
-    doctor_name = st.text_input("Doctor's Name", "Sample Doctor")
-
-    st.subheader("Authorization Request Details")
-    request_date = st.date_input("Date of Request", pd.to_datetime("2024-08-30"))
-
-    if st.form_submit_button("Submit"):
-        st.success("Pre-Authorization Request Submitted Successfully!")
-        st.write({
-            "Name": patient_name, "Age": patient_age, "Gender": patient_gender, "Contact": patient_contact,
-            "Insurance Provider": insurance_provider, "Policy Number": policy_number, "Coverage Details": coverage_details,
-            "Requested Treatment": requested_treatment, "Diagnosis": diagnosis, "Proposed Date": proposed_date,
-            "Previous Treatments": previous_treatments, "Current Medications": current_medications, "Allergies": allergies,
-            "Hospital/Clinic Name": hospital_name, "Doctor's Name": doctor_name, "Date of Request": request_date
-        })

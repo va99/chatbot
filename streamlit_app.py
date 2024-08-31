@@ -20,12 +20,20 @@ tpa_data = {
 np.random.seed(0)
 cities = ["Mumbai", "Delhi", "Bengaluru", "Chennai", "Hyderabad"]
 modes = ["TPA", "Cash"]
-data = [{
-    "id": i + 1, "referral_id": f"R{str(i + 1).zfill(3)}", "patient_name": f"Patient {i + 1}",
-    "patient_age": np.random.randint(20, 80), "patient_mobile": f"9{np.random.randint(100000000, 999999999)}",
-    "mode_of_payment": np.random.choice(modes), "tpa_partner": np.random.choice(list(tpa_data.keys())) if np.random.choice(modes) == "TPA" else None,
-    "city": np.random.choice(cities)
-} for i in range(67)]
+data = []
+for i in range(67):
+    mode_of_payment = np.random.choice(modes)
+    tpa_partner = np.random.choice(list(tpa_data.keys())) if mode_of_payment == "TPA" else None
+    data.append({
+        "id": i + 1,
+        "referral_id": f"R{str(i + 1).zfill(3)}",
+        "patient_name": f"Patient {i + 1}",
+        "patient_age": np.random.randint(20, 80),
+        "patient_mobile": f"9{np.random.randint(100000000, 999999999)}",
+        "mode_of_payment": mode_of_payment,
+        "tpa_partner": tpa_partner,
+        "city": np.random.choice(cities)
+    })
 
 df = pd.DataFrame(data)
 df['tpa_partner_name'] = df['tpa_partner'].map(tpa_data).fillna('N/A')
@@ -35,7 +43,7 @@ total_patients = len(df)
 total_revenue_inr = total_patients * 1299 * 82.3
 cash_patients = df['mode_of_payment'].value_counts().get('Cash', 0)
 tpa_patients = df['mode_of_payment'].value_counts().get('TPA', 0)
-total_minutes_saved = df['time_saved_minutes'].sum() if 'time_saved_minutes' in df.columns else 0
+total_minutes_saved = df.get('time_saved_minutes', pd.Series([0])).sum()
 total_hours_saved = total_minutes_saved / 60
 
 # Display metrics

@@ -5,6 +5,7 @@ import streamlit as st
 import altair as alt
 import pandas as pd
 
+
 # Set the title and favicon that appear in the Browser's tab bar.
 st.set_page_config(
     page_title="Referral Patient Tracker",
@@ -145,6 +146,15 @@ def add_hospital_to_db(conn, name, description, city, state, total_beds, tpas):
     )
     conn.commit()
 
+def query_llm(prompt):
+    """Query the LLM with a given prompt."""
+    response = openai.Completion.create(
+        engine="text-davinci-003",
+        prompt=prompt,
+        max_tokens=150
+    )
+    return response.choices[0].text.strip()
+
 # -----------------------------------------------------------------------------
 # Define TPA options (Mock Data from Doctor App)
 tpa_options = ["TPA1", "TPA2", "TPA3"]
@@ -263,7 +273,4 @@ st.altair_chart(
     .mark_bar()
     .encode(
         x=alt.X('Count', title='Number of Referrals'),
-        y=alt.Y('TPA Partner', title='TPA Partner')
-    ),
-    use_container_width=True
-)
+        y=alt.Y('
